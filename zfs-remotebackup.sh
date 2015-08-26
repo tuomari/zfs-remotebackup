@@ -25,8 +25,12 @@ if [[ -z $SNAPNAME_SUFFIX ]]; then
   SNAPNAME_SUFFIX=""
 fi
 
+if [[ -z $SSH_PORT ]]; then
+  SSH_PORT="22";
+fi
+
 if [[ ! -z $ZFSBAK_HOSTNAME ]]; then
-  
+
   # Zfs properties where backup data is stored
   #
   # What is the latest successfull snapshot sent to backup server
@@ -97,10 +101,10 @@ function send {
 
   if [[ $1 == "init" ]]; then
     echo "Initializing $2"
-    /sbin/zfs send -p -e -v "$2" | mbuffer $MBUF_OPTS | ssh "$SSH_USERNAME@$SSH_HOSTNAME" "init $3"
+    /sbin/zfs send -p -e -v "$2" | mbuffer $MBUF_OPTS | ssh -p "$SSH_PORT" "$SSH_USERNAME@$SSH_HOSTNAME" "init $3"
   else
     echo "sending snapshot $1 -> $2 to $3 ";
-    /sbin/zfs send -p -e -v -i "$1" "$2"  | mbuffer $MBUF_OPTS | ssh "$SSH_USERNAME@$SSH_HOSTNAME" "receive $3"
+    /sbin/zfs send -p -e -v -i "$1" "$2"  | mbuffer $MBUF_OPTS | ssh -p "$SSH_PORT" "$SSH_USERNAME@$SSH_HOSTNAME" "receive $3"
   fi
   ret=$?
   echo "ZFS send returnvalue $ret";

@@ -56,6 +56,20 @@ if [[ -z $MBUF_OPTS ]]; then
   MBUF_OPTS="-q -v0 -s 128k -m 50M -R 5M -W 300";
 fi
 
+
+# external scripts can be called after backup
+# Three parameters are given
+# - snapshot type (frequent|daily|weekly|monthly)
+# - target name ie. tank/store/fs
+# - snapshot name ie.: zfs-remotesend-2015-08-25_1234
+#
+# Allowed variable names:
+# SCRIPT_FREQUENT_CMD
+# SCRIPT_DAILY_CMD
+# SCRIPT_WEEKLY_CMD
+# SCRIPT_MONTHLY_CMD
+
+
 }
 
 #############################################################
@@ -189,6 +203,18 @@ if [ $? -ne 0 ]; then
 fi
 
 /sbin/zfs set "$SNAP_LATEST_PROPERTY=$SNAPNAME" "$TARGET"
+
+
+# If backup callback function has been set, call it.
+# Set variable name, and convert to uppercase
+declare CALLBACK_CMD_NAME="SCRIPT_${SNAPTYPE^^}_CMD";
+CALLBACK_CMD=${!CALLBACK_CMD_NAME};
+
+if [ ! -z $CALLBACK_CMD ]; then
+    # Call user defined callback script 
+    nohup "$CALLBACK_CMD" "$SNAPTYPE" "$TARGET" "$SNAPNAME" &
+fi
+
 cleanup "$TARGET" "$SNAPTYPE";
 
 }

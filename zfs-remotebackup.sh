@@ -25,32 +25,32 @@ if [[ -z $SNAPNAME_SUFFIX ]]; then
   SNAPNAME_SUFFIX=""
 fi
 
-if [[ ! -z $HOSTNAME ]]; then
+if [[ ! -z $ZFSBAK_HOSTNAME ]]; then
   
   # Zfs properties where backup data is stored
   #
   # What is the latest successfull snapshot sent to backup server
   if [[ -z $SNAP_LATEST_PROPERTY ]]; then
-     SNAP_LATEST_PROPERTY="remotebackup-$HOSTNAME:backup-latest";
+     SNAP_LATEST_PROPERTY="remotebackup-$ZFSBAK_HOSTNAME:backup-latest";
   fi
 
   # Destination name in remote server.
   # Defaults to filesystem path without the pool name
   # ie. for tank/hurr/durr -> hurr/durr
   if [[ -z $SNAP_DST_PROPERTY ]]; then
-    SNAP_DST_PROPERTY="remotebackup-$HOSTNAME:backup-dst";
+    SNAP_DST_PROPERTY="remotebackup-$ZFSBAK_HOSTNAME:backup-dst";
   fi
   # How many snapshts should we save 
   # NOTICE: This property is suffixed with snapshot frequency
   # ( frequent, daily, weekly or monthly )
   if [[ -z $SNAP_SAVECOUNT_PROPERTY ]]; then
-    SNAP_SAVECOUNT_PROPERTY="remotebackup-$HOSTNAME:backup-savecount-"
+    SNAP_SAVECOUNT_PROPERTY="remotebackup-$ZFSBAK_HOSTNAME:backup-savecount-"
   fi
 fi
 
 if [[ -z $SNAP_LATEST_PROPERTY ]]; then
    echo "SNAP_LATEST_PROPERTY not defined!"; 
-   echo "Define either $HOSTNAME or SNAP_LATEST_PROPERTY";
+   echo "Define either ZFSBAK_HOSTNAME or SNAP_LATEST_PROPERTY";
    exit 1;
 fi
 
@@ -250,8 +250,6 @@ case $1 in
      ;;
 esac;
 
-
-
 for SOURCE in $(/sbin/zfs get "$SNAP_LATEST_PROPERTY" -r -t volume -H -o name,value|grep -v $'\t-'|cut -f 1 -d$'\t' ); do
    case "$CMD" in
      backup)
@@ -268,9 +266,12 @@ for SOURCE in $(/sbin/zfs get "$SNAP_LATEST_PROPERTY" -r -t volume -H -o name,va
      ;;
      *)
         echo "Unknown command $CMD";
-        exit 1 ;   
+        exit 1 ;
      ;;
    esac
 done
 
 
+echo "All done";
+
+exit 0;

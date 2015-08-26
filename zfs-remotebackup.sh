@@ -3,46 +3,55 @@
 # Copyright(c) 2015 Iudex. All rights reserved
 #
 
+function help {
+   echo "$0 [backup|cleanup [frequent|daily|weekly|monthly]] [configfile]";
+}
+
 function initParams {
+
 
 # Read env from file
 if [[ ! -z $1 && -r $1 ]]; then
   . "$1";
 fi
 
-# Remote server credentials
-if [[ -z $SSH_USERNAME || -z $SSH_HOSTNAME ]]; then
-  echo "SSH_USERNAME and SSH_HOSTNAME are required!"
-  exit 1
-fi
 
 # Snapshot name prefix and suffix
 if [[ -z $SNAPNAME_PREFIX ]]; then
-  SNAPNAME_PREFIX="iudex-backup-";
+  SNAPNAME_PREFIX="zfs-remote-backup-";
 fi
 
 if [[ -z $SNAPNAME_SUFFIX ]]; then
   SNAPNAME_SUFFIX=""
 fi
 
+if [[ ! -z $HOSTNAME ]]; then
+  
+  # Zfs properties where backup data is stored
+  #
+  # What is the latest successfull snapshot sent to backup server
+  if [[ -z $SNAP_LATEST_PROPERTY ]]; then
+     SNAP_LATEST_PROPERTY="remotebackup-$HOSTNAME:backup-latest";
+  fi
 
-# Zfs properties where backup data is stored
-#
-# What is the latest successfull snapshot sent to backup server
+  # Destination name in remote server.
+  # Defaults to filesystem path without the pool name
+  # ie. for tank/hurr/durr -> hurr/durr
+  if [[ -z $SNAP_DST_PROPERTY ]]; then
+    SNAP_DST_PROPERTY="remotebackup-$HOSTNAME:backup-dst";
+  fi
+  # How many snapshts should we save 
+  # NOTICE: This property is suffixed with snapshot frequency
+  # ( frequent, daily, weekly or monthly )
+  if [[ -z $SNAP_SAVECOUNT_PROPERTY ]]; then
+    SNAP_SAVECOUNT_PROPERTY="remotebackup-$HOSTNAME:backup-savecount-"
+  fi
+fi
+
 if [[ -z $SNAP_LATEST_PROPERTY ]]; then
-  SNAP_LATEST_PROPERTY="iudex:backup-latest";
-fi
-# Destination name in remote server.
-# Defaults to filesystem path without the pool name
-# ie. for tank/hurr/durr -> hurr/durr
-if [[ -z $SNAP_DST_PROPERTY ]]; then
-  SNAP_DST_PROPERTY="iudex:backup-dst";
-fi
-# How many snapshts should we save 
-# NOTICE: This property is suffixed with snapshot frequency
-# ( frequent, daily, weekly or monthly )
-if [[ -z $SNAP_SAVECOUNT_PROPERTY ]]; then
-  SNAP_SAVECOUNT_PROPERTY="iudex:backup-savecount-"
+   echo "SNAP_LATEST_PROPERTY not defined!"; 
+   echo "Define either $HOSTNAME or SNAP_LATEST_PROPERTY";
+   exit 1;
 fi
 
 # Mbuffer options
@@ -219,10 +228,9 @@ cleanup "$TARGET" "$SNAPTYPE";
 
 }
 
-
 case $1 in
      help)
-	echo "$0 [backup|cleanup [frequent|daily|weekly|monthly]] [configfile]";
+	help
 	exit 0;
      ;;
      backup)
@@ -247,6 +255,12 @@ esac;
 for SOURCE in $(/sbin/zfs get "$SNAP_LATEST_PROPERTY" -r -t volume -H -o name,value|grep -v $'\t-'|cut -f 1 -d$'\t' ); do
    case "$CMD" in
      backup)
+
+       if [[ -z $SSH_USERNAME || -z $SSH_HOSTNAME || -z $SNAP_DST_PROPERTY || -z SNAP_SAVECOUNT_PROPERTY ]]; then
+         echo "SSH_USERNAME, SSH_HOSTNAME, SNAP_DST_PROPERTY and SNAP_SAVECOUNT_PROPERTY are required!"
+	 help;
+	 exit 1
+       fi
        backup "$SOURCE";
      ;;
      cleanup)

@@ -97,10 +97,10 @@ function send {
 
   if [[ $1 == "init" ]]; then
     echo "Initializing $2"
-    /sbin/zfs send -e -v "$2" | mbuffer $MBUF_OPTS | ssh "$SSH_USERNAME@$SSH_HOSTNAME" "init $3"
+    /sbin/zfs send -p -e -v "$2" | mbuffer $MBUF_OPTS | ssh "$SSH_USERNAME@$SSH_HOSTNAME" "init $3"
   else
     echo "sending snapshot $1 -> $2 to $3 ";
-    /sbin/zfs send -e -v -i "$1" "$2"  | mbuffer $MBUF_OPTS | ssh "$SSH_USERNAME@$SSH_HOSTNAME" "receive $3"
+    /sbin/zfs send -p -e -v -i "$1" "$2"  | mbuffer $MBUF_OPTS | ssh "$SSH_USERNAME@$SSH_HOSTNAME" "receive $3"
   fi
   ret=$?
   echo "ZFS send returnvalue $ret";

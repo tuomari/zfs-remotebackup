@@ -94,7 +94,7 @@ function cleanup {
 
  TARGET=$1;
  SNAPTYPE=$2
- SAVECOUNT=$(/sbin/zfs get -H -o value $SNAP_SAVECOUNT_PROPERTY$SNAPTYPE $TARGET);
+ SAVECOUNT=$(/sbin/zfs get -H -o value "$SNAP_SAVECOUNT_PROPERTY$SNAPTYPE" "$TARGET");
 
  # Default values for snapshots to save.
  if [[ -z $SAVECOUNT || ! $SAVECOUNT =~ ^[0-9]+$ ]]; then
@@ -200,18 +200,18 @@ case $1 in
 	exit 0;
      ;;
      backup)
-       initParams $2;
+       initParams "$2";
        CMD="backup";
      ;;
 
      cleanup)
-        initParams $3;
-        SNAPTYPE=$2;
+        initParams "$3";
+        SNAPTYPE="$2";
 	CMD="cleanup";
     ;;
 
      *)
-        initParams $1;
+        initParams "$1";
 	CMD="backup";
      ;;
 esac;
@@ -219,12 +219,12 @@ esac;
 
 
 for SOURCE in $(/sbin/zfs get "$SNAP_LATEST_PROPERTY" -r -t volume -H -o name,value|grep -v $'\t-'|cut -f 1 -d$'\t' ); do
-   case $CMD in 
+   case "$CMD" in
      backup)
-       backup $SOURCE;
+       backup "$SOURCE";
      ;;
      cleanup)
-       cleanup $SOURCE $SNAPTYPE;
+       cleanup "$SOURCE" "$SNAPTYPE";
      ;;
      *)
         echo "Unknown command $CMD";

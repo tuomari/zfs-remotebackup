@@ -5,38 +5,47 @@
 
 # Usage:
 # ~/.ssh/authorized_keys
-# command="BACKROOT='tank/remote-backup' /usr/local/bin/backup-wrapper.sh $SSH_ORIGINAL_COMMAND",from="127.0.0.1",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty ssh-rsa ...
+# command="BASEPATH='tank/remote-backup' /usr/local/bin/zfs-backup-wrapper.sh $SSH_ORIGINAL_COMMAND",from="127.0.0.1",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty ssh-rsa ...
 #
 
+COMMAND=$1;
+ENDPATH=$2;
 
-if [ -z $BACKROOT ]; then
- echo "BACKROOT variable missing!";
+if [ -z "$BASEPATH" ]; then
+ echo "BASEPATH variable missing!";
 fi
 
-RCVCMD="mbuffer -q -v0 -s 128k -m 32M | /usr/bin/sudo /sbin/zfs receive $BACKROOT/$2"
+if [ -z "$MBUFCMD" ]; then
+  MBUFCMD="mbuffer -q -v0 -s 128k -m 32M"
+fi
 
-case "$1" in
+RCVCMD="$MBUFCMD | /usr/bin/sudo /sbin/zfs receive $BACKROOT/$ENDPATH"
+
+case "$COMMAND" in
 	list)
-		sudo zfs list "$BACKROOT$2"
+		sudo zfs list -r -t all "$BASEPATH/$ENDPATH";
 		;;
-	receive)
-		if [[ -z "$2" ]]
+	 snap)
+                 sudo zfs snap "$BASEPATH/$ENDPATH"
+                 ;;
+	 receive)
+		if [[ -z "$ENDPATH" ]]
 		  then
 		  echo "dataset name required!";
 		  exit 1;
 		fi
-		 eval $RCVCMD
+		 eval "$RCVCMD"
 		;;
 	init)
-	        vol=$BACKROOT;
-		for i in `echo  $2 |sed 's|/[^/]*$||'|sed 's|/| |g'`; do
+	        vol="$BASEPATH";
+		for i in $(echo  "$ENDPATH" |sed 's|/[^/]*$||'|sed 's|/| |g'); do
 		   vol="$vol/$i";
-		   /usr/bin/sudo /sbin/zfs create $vol;
+		   /usr/bin/sudo /sbin/zfs create "$vol";
                 done;
-		eval $RCVCMD;
+		eval "$RCVCMD";
 
 		;;
         *)
-		echo "Illegal command $1";
+		echo "Illegal command $COMMAND";
 		;;
 esac

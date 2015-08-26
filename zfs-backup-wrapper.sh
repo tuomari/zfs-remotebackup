@@ -19,7 +19,7 @@ if [ -z "$MBUFCMD" ]; then
   MBUFCMD="mbuffer -q -v0 -s 128k -m 32M"
 fi
 
-RCVCMD="$MBUFCMD | /usr/bin/sudo /sbin/zfs receive $BACKROOT/$ENDPATH"
+RCVCMD="$MBUFCMD | /usr/bin/sudo /sbin/zfs receive $BASEPATH/$ENDPATH"
 
 case "$COMMAND" in
 	list)

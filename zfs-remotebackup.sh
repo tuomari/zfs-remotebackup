@@ -4,7 +4,7 @@
 #
 
 function help {
-   echo "$0 [backup|cleanup [frequent|daily|weekly|monthly]] [configfile]";
+   echo "$0 [backup|cleanup [frequent|daily|weekly|monthly]|cleanupfs [target] [frequent|daily|wekly|monthly]] [configfile]";
 }
 
 function initParams {
@@ -228,33 +228,19 @@ if [ ! -z $CALLBACK_CMD ]; then
     nohup "$CALLBACK_CMD" "$SNAPTYPE" "$TARGET" "$SNAPNAME" &
 fi
 
+
+ssh -p "$SSH_PORT" "$SSH_USERNAME@$SSH_HOSTNAME" "cleanup $TARGET $SNAPTYPE $SNAPNAME_PREFIX $SNAP_SAVECOUNT_PROPERTY"  &
+
 cleanup "$TARGET" "$SNAPTYPE";
 
 }
 
-case $1 in
-     help)
-	help
-	exit 0;
-     ;;
-     backup)
-       initParams "$2";
-       CMD="backup";
-     ;;
 
-     cleanup)
-        initParams "$3";
-        SNAPTYPE="$2";
-	CMD="cleanup";
-    ;;
+function loopAll {
 
-     *)
-        initParams "$1";
-	CMD="backup";
-     ;;
-esac;
+CMD="$1";
 
-for SOURCE in $(/sbin/zfs get "$SNAP_LATEST_PROPERTY" -r -t volume -H -o name,value|grep -v $'\t-'|cut -f 1 -d$'\t' ); do
+for SOURCE in $(/sbin/zfs get "$SNAP_LATEST_PROPERTY" -r -t volume,filesystem -H -o name,value|grep -v $'\t-'|cut -f 1 -d$'\t' ); do
    case "$CMD" in
      backup)
 
@@ -274,6 +260,37 @@ for SOURCE in $(/sbin/zfs get "$SNAP_LATEST_PROPERTY" -r -t volume -H -o name,va
      ;;
    esac
 done
+
+}
+
+case $1 in
+     help)
+	help
+	exit 0;
+     ;;
+     backup)
+       initParams "$2";
+       loopAll "backup";
+     ;;
+
+     cleanup)
+        initParams "$3";
+        SNAPTYPE="$2";
+	loopAll "cleanup"
+        ;;
+     cleanupfs)
+        initParams "$4";
+        SNAPTYPE="$3";
+	CLEANUPFS="$2";
+	cleanup "$CLEANUPFS" "$SNAPTYPE";
+        ;;
+     *)
+        initParams "$1";
+	loopAll "backup"
+     ;;
+esac;
+
+
 
 
 echo "All done";

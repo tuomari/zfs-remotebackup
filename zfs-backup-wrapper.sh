@@ -31,7 +31,7 @@ function cleanup {
 
  TARGET=$1;
  SNAPTYPE=$2
- SAVECOUNT=$(/sbin/zfs get -H -o value "$SNAP_SAVECOUNT_PROPERTY$SNAPTYPE" "$TARGET");
+ SAVECOUNT=$(sudo /sbin/zfs get -H -o value "$SNAP_SAVECOUNT_PROPERTY$SNAPTYPE" "$TARGET");
 
  # Default values for snapshots to save.
  if [[ -z $SAVECOUNT || ! $SAVECOUNT =~ ^[0-9]+$ ]]; then
@@ -50,7 +50,7 @@ if [ $SAVECOUNT -le 0 ]; then
 fi
 
  echo "Keeping latest $SAVECOUNT snapshots. destroying the rest from $TARGET with grep $SNAPNAME_PREFIX$SNAPTYPE$SNAPNAME_SUFFFIX";
- for i in $(sudo /sbin/zfs list -H -o name -r -t snapshot "$TARGET" |grep "$SNAPNAME_PREFIX$SNAPTYPE$SNAPNAME_SUFFFIX" |head -n -$SAVECOUNT); do 
+ for i in $(sudo /sbin/zfs list -H -o name -r -t snapshot $TARGET |grep "$SNAPNAME_PREFIX$SNAPTYPE$SNAPNAME_SUFFFIX" |head -n -$SAVECOUNT); do 
    echo "Destroying $i";
    sudo /sbin/zfs destroy "$i";
  done

@@ -6,7 +6,8 @@
 # Usage:
 # ~/.ssh/authorized_keys
 # command="BASEPATH='tank/remote-backup' /usr/local/bin/zfs-backup-wrapper.sh $SSH_ORIGINAL_COMMAND",from="127.0.0.1",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty ssh-rsa ...
-#
+
+
 
 COMMAND=$1;
 ENDPATH=$2;
@@ -23,26 +24,29 @@ RCVCMD="$MBUFCMD | /usr/bin/sudo /sbin/zfs receive $BASEPATH/$ENDPATH"
 
 function cleanup {
 
-  echo "Running cleanup for $1 $2";
+ echo "Running cleanup for $1 $2";
   if [[ -z $1 || -z $2 ]] ; then
      echo "TWO parameters required for cleanup: TARGET and SNAPTYPE"
      return 1;
   fi
 
- TARGET=$1;
- SNAPTYPE=$2
- SAVECOUNT=$(sudo /sbin/zfs get -H -o value "$SNAP_SAVECOUNT_PROPERTY$SNAPTYPE" "$TARGET");
+ TARGET="$BASEPATH/$1";
+ SNAPTYPE="$2";
+ SNAPNAME_PREFIX="$3";
+ SNAP_SAVECOUNT_PROPERTY="$4";
 
+ SAVECOUNT=$(/usr/bin/sudo /sbin/zfs get -H -o value "$SNAP_SAVECOUNT_PROPERTY$SNAPTYPE" "$TARGET");
  # Default values for snapshots to save.
  if [[ -z $SAVECOUNT || ! $SAVECOUNT =~ ^[0-9]+$ ]]; then
    case "$SNAPTYPE" in
-     "frequent") SAVECOUNT=48 ;;
-     "daily") SAVECOUNT=31 ;;
-     "weekly") SAVECOUNT=8 ;;
-     "monthly") SAVECOUNT=12 ;;
+     "frequent") SAVECOUNT=48; ;;
+     "daily") SAVECOUNT=31; ;;
+     "weekly") SAVECOUNT=8; ;;
+     "monthly") SAVECOUNT=12; ;;
+     *) echo "Unknown savecount $SNAPTYPE"; exit 1; ;;
    esac
  fi
-
+ echo "Savecount $SAVECOUNT for $SNAPTYPE";
 # We always want to save atleast one snapshot of a kind.
 #
 if [ $SAVECOUNT -le 0 ]; then
@@ -82,10 +86,7 @@ case "$COMMAND" in
 
 		;;
         cleanup)
-		SNAPNAME_PREFIX="$5";
-		SNAPNAME_SUFFFIX="$6";
-		SNAP_SAVECOUNT_PROPERTY="$7";
-		cleanup "$BASEPATH/$ENDPATH" "$3";
+		cleanup $2 $3 $4 $5;
  		;;
        *)
 		echo "Illegal command $COMMAND";

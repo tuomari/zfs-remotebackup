@@ -229,7 +229,7 @@ if [ ! -z $CALLBACK_CMD ]; then
 fi
 
 
-ssh -p "$SSH_PORT" "$SSH_USERNAME@$SSH_HOSTNAME" "cleanup $TARGET $SNAPTYPE $SNAPNAME_PREFIX $SNAP_SAVECOUNT_PROPERTY"  &
+ssh -p "$SSH_PORT" "$SSH_USERNAME@$SSH_HOSTNAME" "cleanup $DSTTARGET $SNAPTYPE $SNAPNAME_PREFIX $SNAP_SAVECOUNT_PROPERTY"  &
 
 cleanup "$TARGET" "$SNAPTYPE";
 
@@ -240,7 +240,7 @@ function loopAll {
 
 CMD="$1";
 
-for SOURCE in $(/sbin/zfs get "$SNAP_LATEST_PROPERTY" -r -t volume,filesystem -H -o name,value|grep -v $'\t-'|cut -f 1 -d$'\t' ); do
+for SOURCE in $(/sbin/zfs get "$SNAP_LATEST_PROPERTY" -r -t volume,filesystem -H -o name,value|egrep "(init|$SNAPNAME_PREFIX)" |grep -v $'\t-'|cut -f 1 -d$'\t' ); do
    case "$CMD" in
      backup)
 

@@ -34,9 +34,11 @@ function cleanup {
  SNAPTYPE="$2";
  SNAPNAME_PREFIX="$3";
  SNAP_SAVECOUNT_PROPERTY="$4";
-
- SAVECOUNT=$(/usr/bin/sudo /sbin/zfs get -H -o value "$SNAP_SAVECOUNT_PROPERTY$SNAPTYPE" "$TARGET");
- # Default values for snapshots to save.
+ if [ ! -z $SNAP_SAVECOUNT_PROPERTY ]; then
+    SAVECOUNT=$(/usr/bin/sudo /sbin/zfs get -H -o value "$SNAP_SAVECOUNT_PROPERTY$SNAPTYPE" "$TARGET");
+ fi
+ 
+# Default values for snapshots to save.
  if [[ -z $SAVECOUNT || ! $SAVECOUNT =~ ^[0-9]+$ ]]; then
    case "$SNAPTYPE" in
      "frequent") SAVECOUNT=48; ;;
@@ -85,7 +87,11 @@ case "$COMMAND" in
 		eval "$RCVCMD";
 
 		;;
-        cleanup)
+	 snapshot)
+	        SNAPNAME="$3";
+	        /usr/bin/sudo /sbin/zfs snapshot "$BASEPATH/$ENDPATH@$SNAPNAME";
+	        ;;
+         cleanup)
 		# $2 target, without $BASEPATH
 		# $3 snaptype ( daily, weekly .. )
 		# $4 snapshot name prefix

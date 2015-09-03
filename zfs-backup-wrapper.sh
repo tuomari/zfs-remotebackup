@@ -54,7 +54,7 @@ if [ $SAVECOUNT -le 0 ]; then
 fi
 
  echo "Keeping latest $SAVECOUNT snapshots. destroying the rest from $TARGET with grep $SNAPNAME_PREFIX$SNAPTYPE$SNAPNAME_SUFFFIX";
- for i in $(sudo /sbin/zfs list -H -o name -r -t snapshot $TARGET |grep "$SNAPNAME_PREFIX$SNAPTYPE$SNAPNAME_SUFFFIX" |head -n -$SAVECOUNT); do 
+ for i in $(sudo /sbin/zfs list -H -o name -r -t snapshot "$TARGET" |grep "$SNAPNAME_PREFIX$SNAPTYPE$SNAPNAME_SUFFFIX" |head -n -$SAVECOUNT); do 
    echo "Destroying $i";
    sudo /sbin/zfs destroy "$i";
  done
@@ -86,7 +86,11 @@ case "$COMMAND" in
 
 		;;
         cleanup)
-		cleanup $2 $3 $4 $5;
+		# $2 target, without $BASEPATH
+		# $3 snaptype ( daily, weekly .. )
+		# $4 snapshot name prefix
+	 	# $5 snapshot savecount property, ie where we store how many daily,weekly snapshots should be saved
+                cleanup "$2" "$3" "$4" "$5";
  		;;
        *)
 		echo "Illegal command $COMMAND";

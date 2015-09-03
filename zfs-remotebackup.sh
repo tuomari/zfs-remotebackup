@@ -155,8 +155,8 @@ if [[ -z $1 ]]; then
 fi
 
 TARGET=$1;
-LATEST=$(/sbin/zfs get "$SNAP_LATEST_PROPERTY" "$TARGET" -H -o value);
-DSTTARGET=$(/sbin/zfs get "$SNAP_DST_PROPERTY" "$TARGET" -H -o value);
+LATEST=$(/sbin/zfs get "$SNAP_LATEST_PROPERTY" "$TARGET" -H -o value -s local);
+DSTTARGET=$(/sbin/zfs get "$SNAP_DST_PROPERTY" "$TARGET" -H -o value -s local);
 echo "Backing up $TARGET. Latest backup $LATEST. Destination $DSTTARGET";
 
 #Default snaptype t frequent
@@ -240,7 +240,7 @@ function loopAll {
 
 CMD="$1";
 
-for SOURCE in $(/sbin/zfs get "$SNAP_LATEST_PROPERTY" -r -t volume,filesystem -H -o name,value|egrep "(init|$SNAPNAME_PREFIX)" |grep -v $'\t-'|cut -f 1 -d$'\t' ); do
+for SOURCE in $(/sbin/zfs get "$SNAP_LATEST_PROPERTY" -s local -r -t volume,filesystem -H -o name,value|egrep "(init|$SNAPNAME_PREFIX)" |grep -v $'\t-'|cut -f 1 -d$'\t' ); do
    case "$CMD" in
      backup)
 

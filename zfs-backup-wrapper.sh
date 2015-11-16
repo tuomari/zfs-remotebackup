@@ -34,7 +34,7 @@ function cleanup {
  SNAPTYPE="$2";
  SNAPNAME_PREFIX="$3";
  SNAP_SAVECOUNT_PROPERTY="$4";
- if [ ! -z $SNAP_SAVECOUNT_PROPERTY ]; then
+ if [ ! -z "$SNAP_SAVECOUNT_PROPERTY" ]; then
     SAVECOUNT=$(/usr/bin/sudo /sbin/zfs get -H -o value "$SNAP_SAVECOUNT_PROPERTY$SNAPTYPE" "$TARGET");
  fi
  
@@ -63,6 +63,25 @@ fi
 
 }
 
+
+function receive {
+	if [[ -z "$ENDPATH" ]]
+	  then
+	  echo "dataset name required!";
+	  exit 1;
+	fi
+	eval "$1";
+}
+
+function init {
+	vol="$BASEPATH";
+	for i in $(echo  "$ENDPATH" |sed 's|/[^/]*$||'|sed 's|/| |g'); do
+	   vol="$vol/$i";
+	   /usr/bin/sudo /sbin/zfs create "$vol";
+	done;
+	eval "$1";
+}
+
 case "$COMMAND" in
 	list)
 		sudo zfs list -r -t all "$BASEPATH/$ENDPATH";
@@ -70,22 +89,17 @@ case "$COMMAND" in
 	 snap)
                  sudo zfs snap "$BASEPATH/$ENDPATH"
                  ;;
+	 zreceive)
+	         receive "unpigz | $RCVCMD";
+		;;
 	 receive)
-		if [[ -z "$ENDPATH" ]]
-		  then
-		  echo "dataset name required!";
-		  exit 1;
-		fi
-		 eval "$RCVCMD"
+		receive "$RCVCMD";
+		;;
+	zinit)
+	        init "pigz | $RCVCMD";
 		;;
 	init)
-	        vol="$BASEPATH";
-		for i in $(echo  "$ENDPATH" |sed 's|/[^/]*$||'|sed 's|/| |g'); do
-		   vol="$vol/$i";
-		   /usr/bin/sudo /sbin/zfs create "$vol";
-                done;
-		eval "$RCVCMD";
-
+		init "$RCVCMD";
 		;;
 	 snapshot)
 	        SNAPNAME="$3";

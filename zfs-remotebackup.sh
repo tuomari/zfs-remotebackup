@@ -21,6 +21,10 @@ if [[ -z $SNAPNAME_PREFIX ]]; then
   SNAPNAME_PREFIX="zfs-remote-backup-";
 fi
 
+if [[ -z $SEND_GZIP ]]; then
+  SEND_GZIP="yes";
+fi
+
 if [[ -z $SNAPNAME_SUFFIX ]]; then
   SNAPNAME_SUFFIX=""
 fi
@@ -101,12 +105,18 @@ function send {
 
   if [[ $1 == "init" ]]; then
     echo "Initializing $2"
-    /sbin/zfs send -p -e -v "$2" | mbuffer $MBUF_OPTS | ssh -p "$SSH_PORT" "$SSH_USERNAME@$SSH_HOSTNAME" "init $3"
+    /sbin/zfs send -e -v "$2" | pigz | mbuffer $MBUF_OPTS | ssh -p "$SSH_PORT" "$SSH_USERNAME@$SSH_HOSTNAME" "zinit $3"
   else
     echo "sending snapshot $1 -> $2 to $3 ";
-    /sbin/zfs send -p -e -v -i "$1" "$2"  | mbuffer $MBUF_OPTS | ssh -p "$SSH_PORT" "$SSH_USERNAME@$SSH_HOSTNAME" "receive $3"
+    /sbin/zfs send -e -v -i "$1" "$2" | pigz | mbuffer $MBUF_OPTS | ssh -p "$SSH_PORT" "$SSH_USERNAME@$SSH_HOSTNAME" "zreceive $3"
   fi
   ret=$?
+  echo "Got state $ret from sending stuff to remote";
+  if [ $ret -eq 0 ]; then
+     /sbin/zfs set "$SNAP_LATEST_PROPERTY=$SNAPNAME" "$TARGET"
+  fi
+
+
   echo "ZFS send returnvalue $ret";
   # Return how zfs send command returned.
   return $ret;
@@ -159,22 +169,25 @@ LATEST=$(/sbin/zfs get "$SNAP_LATEST_PROPERTY" "$TARGET" -H -o value -s local);
 DSTTARGET=$(/sbin/zfs get "$SNAP_DST_PROPERTY" "$TARGET" -H -o value -s local);
 echo "Backing up $TARGET. Latest backup $LATEST. Destination $DSTTARGET";
 
-#Default snaptype t frequent
-SNAPTYPE='frequent';
+if [[ ! -z $FORCE_SNAPTYPE ]]; then
+  SNAPTYPE="$FORCE_SNAPTYPE";
+else
+  #Default snaptype t frequent
+  SNAPTYPE='frequent';
 
-# Is this the first backup of the day?
-if ! echo "$LATEST" | grep "$(date -d "$STARTTIME" +%Y-%m-%d)" ; then
-  # First snapshot of the day. Make longer living snapshot.
-  SNAPTYPE="daily";
-  if [[ $(date -d "$STARTTIME" +%d) == "01" ]]; then
-     # Today is first of month. Do monthly snapshot
-     SNAPTYPE='monthly';
-  elif [[ $(date -d "$STARTTIME" +%u) == "7" ]]; then
-      # Today is sunday. Do weekly snapshot
-      SNAPTYPE='weekly';
+  # Is this the first backup of the day?
+  if ! echo "$LATEST" | grep "$(date -d "$STARTTIME" +%Y-%m-%d)" ; then
+    # First snapshot of the day. Make longer living snapshot.
+    SNAPTYPE="daily";
+    if [[ $(date -d "$STARTTIME" +%d) == "01" ]]; then
+       # Today is first of month. Do monthly snapshot
+       SNAPTYPE='monthly';
+    elif [[ $(date -d "$STARTTIME" +%u) == "7" ]]; then
+        # Today is sunday. Do weekly snapshot
+        SNAPTYPE='weekly';
+    fi
   fi
 fi
-
 SNAPNAME=$(date -d "$STARTTIME" +"$SNAPNAME_PREFIX$SNAPTYPE-%Y-%m-%d-%H%M%S$SNAPNAME_SUFFIX");
 
 if( [[ -z $DSTTARGET  ]] || [[ $DSTTARGET == "-" ]] ); then
@@ -208,16 +221,17 @@ else
   SRCSNAP=$LATEST;
 fi
 
-send "$SRCSNAP" "$NEWSNAP" "$DSTTARGET";
+# Only send to remote when not doing frequent
+if [ "$SNAPTYPE" != "frequent" ]; then
+  send "$SRCSNAP" "$NEWSNAP" "$DSTTARGET";
+  if [ $? -ne 0 ]; then
+    echo "Sending snapshot failed...";
+    return 1;
+  fi
+  # Remote cleanup
+  ssh -p "$SSH_PORT" "$SSH_USERNAME@$SSH_HOSTNAME" "cleanup $DSTTARGET $SNAPTYPE $SNAPNAME_PREFIX $SNAP_SAVECOUNT_PROPERTY"  &
 
-if [ $? -ne 0 ]; then
-  echo "Sending snapshot failed. Not updating latest backup..";
-  return 1;
 fi
-
-/sbin/zfs set "$SNAP_LATEST_PROPERTY=$SNAPNAME" "$TARGET"
-
-
 # If backup callback function has been set, call it.
 # Set variable name, and convert to uppercase
 declare CALLBACK_CMD_NAME="SCRIPT_${SNAPTYPE^^}_CMD";
@@ -228,9 +242,7 @@ if [ ! -z $CALLBACK_CMD ]; then
     nohup "$CALLBACK_CMD" "$SNAPTYPE" "$TARGET" "$SNAPNAME" &
 fi
 
-
-ssh -p "$SSH_PORT" "$SSH_USERNAME@$SSH_HOSTNAME" "cleanup $DSTTARGET $SNAPTYPE $SNAPNAME_PREFIX $SNAP_SAVECOUNT_PROPERTY"  &
-
+# Local cleanup
 cleanup "$TARGET" "$SNAPTYPE";
 
 }
@@ -288,7 +300,7 @@ case $1 in
         initParams "$1";
 	loopAll "backup"
      ;;
-esac;
+esac
 
 
 

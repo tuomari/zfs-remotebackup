@@ -83,8 +83,20 @@ fi
 # -m 256M | Total memory for buffer
 # -R 5M	  | Rate limit buffer speed
 # -W 300  | IO timeout.
-if [[ -z $MBUF_OPTS ]]; then
-  MBUF_OPTS="-q -v0 -s 128k -m 50M -R 5M -W 300";
+#if [[ -z $MBUF_OPTS ]]; then
+#  MBUF_OPTS="-q -v0 -s 128k -m 50M -R 5M -W 300";
+#fi
+if [[ ! -z $MBUF_OPTS ]]; then
+  echo "MBUF opts is deprecated. Use PV_OPTS instead";
+  exit 1;
+fi
+
+
+# -L 5M   | Rate limit transfer 
+# -B 50m  | Transfer buffer size
+# -q      | quiet
+if [[ -z $PV_OPTS ]]; then
+  PV_OPTS="-L 5m -B 50m -q";
 fi
 
 
@@ -119,10 +131,10 @@ function send {
 
   if [[ $1 == "init" ]]; then
     echo "Initializing $2"
-    /sbin/zfs send -e -v "$2" | pigz | mbuffer $MBUF_OPTS | ssh -p "$SSH_PORT" "$SSH_USERNAME@$SSH_HOSTNAME" "zinit $3"
+    /sbin/zfs send -e -v "$2" | pigz | pv $PV_OPTS | ssh -p "$SSH_PORT" "$SSH_USERNAME@$SSH_HOSTNAME" "zinit $3"
   else
     echo "sending snapshot $1 -> $2 to $3 ";
-    /sbin/zfs send -e -v -i "$1" "$2" | pigz | mbuffer $MBUF_OPTS | ssh -p "$SSH_PORT" "$SSH_USERNAME@$SSH_HOSTNAME" "zreceive $3"
+    /sbin/zfs send -e -v -i "$1" "$2" | pigz | pv $PV_OPTS | ssh -p "$SSH_PORT" "$SSH_USERNAME@$SSH_HOSTNAME" "zreceive $3"
   fi
   ret=$?
   echo "Got state $ret from sending stuff to remote";

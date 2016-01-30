@@ -17,7 +17,7 @@ if [ -z "$BASEPATH" ]; then
 fi
 
 if [ -z "$MBUFCMD" ]; then
-  MBUFCMD="mbuffer -q -v0 -s 128k -m 32M"
+  MBUFCMD="pv -B 50M -q"
 fi
 
 RCVCMD="$MBUFCMD | /usr/bin/sudo /sbin/zfs receive $BASEPATH/$ENDPATH"
@@ -74,12 +74,14 @@ function receive {
 }
 
 function init {
+   if [[ "$ENDPATH" == *"/"* ]]; then
 	vol="$BASEPATH";
 	for i in $(echo  "$ENDPATH" |sed 's|/[^/]*$||'|sed 's|/| |g'); do
 	   vol="$vol/$i";
 	   /usr/bin/sudo /sbin/zfs create "$vol";
 	done;
-	eval "$1";
+   fi
+   eval "$1";
 }
 
 case "$COMMAND" in
@@ -96,7 +98,7 @@ case "$COMMAND" in
 		receive "$RCVCMD";
 		;;
 	zinit)
-	        init "pigz | $RCVCMD";
+	        init "unpigz | $RCVCMD";
 		;;
 	init)
 		init "$RCVCMD";

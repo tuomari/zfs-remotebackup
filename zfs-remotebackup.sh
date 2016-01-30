@@ -251,7 +251,7 @@ fi
 SNAPNAME=$(date -d "$STARTTIME" +"$SNAPNAME_PREFIX$SNAPTYPE-%Y-%m-%d-%H%M%S$SNAPNAME_SUFFIX");
 
 if( [[ -z $DSTTARGET  ]] || [[ $DSTTARGET == "-" ]] ); then
-  DSTTARGET=$(echo "$TARGET" | sed 's|^[^/]*/||');
+  DSTTARGET=$(echo "$TARGET-backup" | sed 's|^[^/]*/||');
   /sbin/zfs set "$SNAP_DST_PROPERTY=$DSTTARGET" "$TARGET"
   echo "Warnin!! defaulting DSTTARGET $DSTTARGET";
 fi

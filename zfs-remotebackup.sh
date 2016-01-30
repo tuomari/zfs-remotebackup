@@ -33,6 +33,20 @@ if [[ -z $SSH_PORT ]]; then
   SSH_PORT="22";
 fi
 
+if [[ -z $ENABLE_TYPE_FREQUENT ]]; then
+  ENABLE_TYPE_FREQUENT=true;
+fi
+if [[ -z $ENABLE_TYPE_DAILY ]]; then
+  ENABLE_TYPE_DAILY=true;
+fi
+if [[ -z $ENABLE_TYPE_WEEKLY ]]; then
+  ENABLE_TYPE_WEEKLY=true;
+fi
+if [[ -z $ENABLE_TYPE_MONTHLY ]]; then
+  ENABLE_TYPE_MONTHLY=true;
+fi
+
+
 if [[ ! -z $ZFSBAK_HOSTNAME ]]; then
 
   # Zfs properties where backup data is stored
@@ -187,7 +201,41 @@ else
         SNAPTYPE='weekly';
     fi
   fi
+
+  case "$SNAPTYPE" in
+    frequent)
+     if [ $ENABLE_TYPE_FREQUENT != true ]; then
+       echo "Frequent snapshots disabled."
+       return;
+     fi
+    ;;
+    daily)
+     if [ $ENABLE_TYPE_DAILY != true ]; then
+       echo "Daily snapshots disabled."
+       return;
+     fi
+    ;;
+    weekly)
+     if [ $ENABLE_TYPE_WEEKLY != true ]; then
+       echo "Weekly snapshots disabled."
+       return;
+     fi
+    ;;
+    monthly)
+     if [ $ENABLE_TYPE_MONTHLY != true ]; then
+       echo "Monthly snapshots disabled."
+       return;
+     fi
+    ;;
+    *)
+      echo "WTF! Unknown snaptype found: $SNAPTYPE";
+      exit 1;
+    ;;
+esac
+
+
 fi
+
 SNAPNAME=$(date -d "$STARTTIME" +"$SNAPNAME_PREFIX$SNAPTYPE-%Y-%m-%d-%H%M%S$SNAPNAME_SUFFIX");
 
 if( [[ -z $DSTTARGET  ]] || [[ $DSTTARGET == "-" ]] ); then

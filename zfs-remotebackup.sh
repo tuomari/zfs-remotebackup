@@ -3,6 +3,16 @@
 # Copyright(c) 2015 Iudex. All rights reserved
 #
 
+LOCKFILE="/tmp/zfs-remote-backup-${FORCE_SNAPTYPE:-default}.lock"
+
+function create_lock {
+   echo $$ > $LOCKFILE;
+}
+
+function remove_lock {
+    rm "$LOCKFILE"
+}
+
 function help {
    echo "$0 [backup|cleanup [frequent|daily|weekly|monthly]|cleanupfs [target] [frequent|daily|wekly|monthly]] [configfile]";
 }
@@ -176,7 +186,7 @@ if [ $SAVECOUNT -le 0 ]; then
 fi
 
  echo "Keeping latest $SAVECOUNT snapshots. destroying the rest from $TARGET with grep $SNAPNAME_PREFIX$SNAPTYPE$SNAPNAME_SUFFFIX";
- for i in $(/sbin/zfs list -H -o name -r -t snapshot "$TARGET" |grep "$SNAPNAME_PREFIX$SNAPTYPE$SNAPNAME_SUFFFIX" |head -n -$SAVECOUNT); do 
+ for i in $(/sbin/zfs list -H -o name -r -t snapshot "$TARGET" |grep "$SNAPNAME_PREFIX$SNAPTYPE$SNAPNAME_SUFFFIX" | egrep -v "failed$" | head -n -$SAVECOUNT); do 
    echo "Destroying $i";
    /sbin/zfs destroy "$i";
  done
@@ -286,6 +296,7 @@ if [ "$SNAPTYPE" != "frequent" ]; then
   send "$SRCSNAP" "$NEWSNAP" "$DSTTARGET";
   if [ $? -ne 0 ]; then
     echo "Sending snapshot failed...";
+    /sbin/zfs rename "$NEWSNAP" "$NEWSNAP-failed";
     return 1;
   fi
   # Remote cleanup
@@ -335,9 +346,22 @@ done
 
 }
 
+# Locking against paraller execution
+
+if [ -f "${LOCKFILE}" ]
+then
+    echo 'Backup script already running!' 1>&2
+    exit 1
+fi
+
+trap remove_lock SIGINT SIGTERM EXIT
+
+create_lock
+
 case $1 in
      help)
 	help
+        remove_lock
 	exit 0;
      ;;
      backup)
@@ -363,7 +387,7 @@ case $1 in
 esac
 
 
-
+remove_lock
 
 echo "All done";
 

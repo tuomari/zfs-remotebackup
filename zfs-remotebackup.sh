@@ -10,7 +10,7 @@ function create_lock {
 }
 
 function remove_lock {
-    rm "$LOCKFILE"
+  rm -f "$LOCKFILE";
 }
 
 function help {
@@ -180,7 +180,7 @@ function cleanup {
  fi
 
 # We always want to save atleast one snapshot of a kind.
-# 
+#
 if [ $SAVECOUNT -le 0 ]; then
  SAVECOUNT=1;
 fi

@@ -58,7 +58,7 @@ fi
  echo "Keeping latest $SAVECOUNT snapshots. destroying the rest from $TARGET with grep $SNAPNAME_PREFIX$SNAPTYPE$SNAPNAME_SUFFFIX";
  for i in $(/sbin/zfs list -H -o name -r -t snapshot "$TARGET" |grep "$SNAPNAME_PREFIX$SNAPTYPE$SNAPNAME_SUFFFIX" |head -n -$SAVECOUNT); do 
    echo "Destroying $i";
-   sudo /sbin/zfs destroy "$i";
+   /sbin/zfs destroy "$i";
  done
 
 }
@@ -86,10 +86,10 @@ function init {
 
 case "$COMMAND" in
 	list)
-		sudo zfs list -r -t all "$BASEPATH/$ENDPATH";
+		zfs list -r -t all "$BASEPATH/$ENDPATH";
 		;;
 	 snap)
-                 sudo zfs snap "$BASEPATH/$ENDPATH"
+                 zfs snap "$BASEPATH/$ENDPATH"
                  ;;
 	 zreceive)
 	         receive "unpigz | $RCVCMD";

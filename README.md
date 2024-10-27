@@ -10,5 +10,5 @@ or
 
 ```
 zfs allow -u usernamegoeshere mount,create tank/k8-backup
-zfs allow -du usernamegoeshere mount,create,receive tank/k8-backup
+zfs allow -du usernamegoeshere mount,create,receive,destroy tank/k8-backup
 ```

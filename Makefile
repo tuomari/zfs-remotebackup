@@ -4,5 +4,5 @@ default:
 	echo "Nothing"
 
 install:
-	install zfs-remotebackup.sh zfs-backup-wrapper.sh /usr/local/bin
+	install zfs-remotebackup.sh zfs-backup-wrapper.sh zfs-noroot-backup-wrapper.sh /usr/local/bin
 

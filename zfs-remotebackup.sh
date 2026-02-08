@@ -186,7 +186,7 @@ if [ $SAVECOUNT -le 0 ]; then
 fi
 
  echo "Keeping latest $SAVECOUNT snapshots. destroying the rest from $TARGET with grep $SNAPNAME_PREFIX$SNAPTYPE$SNAPNAME_SUFFFIX";
- for i in $(/sbin/zfs list -H -o name -r -t snapshot "$TARGET" |grep "$SNAPNAME_PREFIX$SNAPTYPE$SNAPNAME_SUFFFIX" | egrep -v "failed$" | head -n -$SAVECOUNT); do 
+ for i in $(/sbin/zfs list -H -o name -t snapshot "$TARGET" |grep "$SNAPNAME_PREFIX$SNAPTYPE$SNAPNAME_SUFFFIX" | egrep -v "failed$" | head -n -$SAVECOUNT); do
    echo "Destroying $i";
    /sbin/zfs destroy "$i";
  done
